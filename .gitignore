@@ -1,0 +1,23 @@
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+
+# Spotipy cache (in your package)
+src/spotify_tools/.spotipy.cache
+
+# pytest cache folder
+.pytest_cache/
+
+# egg-info metadata
+src/spotify_tools.egg-info/
+
+# VSCode or editor config files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
