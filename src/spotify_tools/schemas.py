@@ -2,6 +2,27 @@ from typing import Optional
 
 
 from pydantic import BaseModel, NonNegativeInt, PositiveInt
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+###############################################################################
+# Schemas for spotify-tools configs
+###############################################################################
+
+
+class SpotifyConfig(BaseSettings):
+    CLIENT_ID: str = ""
+    CLIENT_SECRET: str = ""
+    PLAYLIST_ID: str = ""
+    REDIRECT_URI: str = ""
+
+    model_config = SettingsConfigDict(env_prefix="SPOTIFY_TOOLS_")
+
+
+###############################################################################
+# Schemas for validating spotipy's "playlist" response
+# https://spotipy.readthedocs.io/en/2.25.1/#spotipy.client.Spotify.playlist
+###############################################################################
 
 
 class ExternalUrls(BaseModel):
@@ -122,8 +143,8 @@ class Tracks(BaseModel):
 
 
 class PlaylistResponse(BaseModel):
-    """Response object returned by Spotipy client's 'playlist' method.
-    """
+    """Response object returned by Spotipy client's 'playlist' method."""
+
     collaborative: Optional[bool] = None
     description: Optional[str] = None
     external_urls: Optional[ExternalUrls] = None

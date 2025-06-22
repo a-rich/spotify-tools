@@ -1,31 +1,31 @@
 """This script is used to create a new playlist from the shuffled tracks of an
 existing playlist.
 """
+
 import random
 from datetime import datetime
 from typing import Optional
 
 from typer import Option, Typer
 
-from spotify_tools.client import Client, SpotifyConfig
+from spotify_tools.client import Client
+from spotify_tools.exceptions import (
+    InvalidLogLevel,
+    NoPlaylistFound,
+    NoTracksFound,
+)
 from spotify_tools.logging import get_logger
-from spotify_tools.schemas import Item, PlaylistResponse, Tracks, User
+from spotify_tools.schemas import (
+    Item,
+    PlaylistResponse,
+    SpotifyConfig,
+    Tracks,
+    User,
+)
 
 
 app = Typer()
 logger = get_logger(name="shuffle_playlist")
-
-
-class InvalidLogLevel(Exception):
-    pass
-
-
-class NoPlaylistFound(Exception):
-    pass
-
-
-class NoTracksFound(Exception):
-    pass
 
 
 def resolve_playlist_id(value: Optional[str]) -> str:
@@ -71,8 +71,7 @@ def shuffle_and_create_new_playlist(
 ) -> PlaylistResponse:
     random.shuffle(tracks)
     track_uris = [
-        item.track.uri for item in tracks
-        if item.track and item.track.uri
+        item.track.uri for item in tracks if item.track and item.track.uri
     ]
     user = User.model_validate(client.me())
     new_playlist = PlaylistResponse.model_validate(
@@ -85,7 +84,7 @@ def shuffle_and_create_new_playlist(
     )
 
     for i in range(0, len(track_uris), 100):
-        client.playlist_add_items(new_playlist.id, track_uris[i:i + 100])
+        client.playlist_add_items(new_playlist.id, track_uris[i : i + 100])
 
     logger.info(
         f"Shuffled '{new_playlist_name}': {new_playlist.external_urls.spotify}"
@@ -104,22 +103,20 @@ def main(
         None,
         help=(
             "New playlist name (default is the old playlist's name with a "
-            "date string and hash added to it)"
+            "date string added to it)"
         ),
     ),
     playlist_id: Optional[str] = Option(
         None,
         callback=resolve_playlist_id,
         help=(
-            "Spotify playlist ID (or set SPOTIFY_TOOLS_PLAYLIST_ID in the "
-            "environment)."
+            "Spotify playlist ID (or set SPOTIFY_TOOLS_PLAYLIST_ID in the environment)."
         ),
     ),
     public_playlist: bool = Option(
-        False,
-        help="Whether or not the new playlist is public."
+        False, help="Whether or not the new playlist is public."
     ),
-):
+) -> None:
     if log_level is not None:
         try:
             logger.setLevel(log_level)
@@ -127,7 +124,7 @@ def main(
             raise InvalidLogLevel(exc)
 
     config = SpotifyConfig(PLAYLIST_ID=playlist_id)
-    client = Client(auth_config=config)
+    client = Client(config=config)
 
     try:
         playlist_resp = client.playlist(playlist_id)
@@ -142,8 +139,8 @@ def main(
 
     if new_playlist_name is None:
         new_playlist_name = make_new_playlist_name(playlist.name)
-    
-    new_playlist = shuffle_and_create_new_playlist(
+
+    shuffle_and_create_new_playlist(
         client=client,
         tracks=tracks,
         old_playlist_name=playlist.name,

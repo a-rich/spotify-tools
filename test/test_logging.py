@@ -31,7 +31,10 @@ def test_get_logger_basic_properties():
 
     # Handler formatter format string
     formatter = handler.formatter
-    assert formatter._fmt == "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
+    assert (
+        formatter._fmt
+        == "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
+    )
     assert formatter.datefmt == "%Y-%m-%d %H:%M:%S"
 
 
