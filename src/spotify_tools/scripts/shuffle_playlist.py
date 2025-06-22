@@ -2,6 +2,7 @@
 existing playlist.
 """
 
+import asyncio
 import random
 from datetime import datetime
 from typing import Optional
@@ -19,7 +20,7 @@ from spotify_tools.schemas import (
     Item,
     PlaylistResponse,
     SpotifyConfig,
-    Tracks,
+    to_dict,
     User,
 )
 
@@ -39,30 +40,13 @@ def resolve_playlist_id(value: Optional[str]) -> str:
         return config.PLAYLIST_ID
 
 
-def get_all_playlist_tracks(
-    client: Client, playlist: PlaylistResponse
-) -> list[Item]:
-    all_items: list[Item] = playlist.tracks.items or []
-
-    while playlist.tracks.next:
-        tracks: Tracks = Tracks.model_validate(
-            client.next(playlist.tracks.model_dump())
-        )
-        all_items.extend(tracks.items)
-        playlist.tracks = tracks
-
-    logger.info(f"Got {len(all_items)} tracks from '{playlist.name}'")
-
-    return all_items
-
-
 def make_new_playlist_name(old_playlist_name: str) -> str:
     date_string = datetime.now().strftime("%Y-%m-%d %H:%M")
 
     return f"{old_playlist_name} ({date_string})"
 
 
-def shuffle_and_create_new_playlist(
+async def shuffle_and_create_new_playlist(
     client: Client,
     tracks: list[Item],
     old_playlist_name: str,
@@ -73,9 +57,12 @@ def shuffle_and_create_new_playlist(
     track_uris = [
         item.track.uri for item in tracks if item.track and item.track.uri
     ]
-    user = User.model_validate(client.me())
+    # TODO: figure out how to get auth working with spotipy2
+    res = await client._get("me")
+    print(res)
+    user = User.model_validate(await client.me())
     new_playlist = PlaylistResponse.model_validate(
-        client.user_playlist_create(
+        await client.user_playlist_create(
             user=user.id,
             name=new_playlist_name,
             public=public_playlist,
@@ -84,13 +71,60 @@ def shuffle_and_create_new_playlist(
     )
 
     for i in range(0, len(track_uris), 100):
-        client.playlist_add_items(new_playlist.id, track_uris[i : i + 100])
+        await client.playlist_add_items(
+            new_playlist.id, track_uris[i : i + 100]
+        )
 
     logger.info(
         f"Shuffled '{new_playlist_name}': {new_playlist.external_urls.spotify}"
     )
 
     return new_playlist
+
+
+async def run(
+    log_level: str,
+    new_playlist_name: str,
+    playlist_id: str,
+    public_playlist: bool,
+) -> None:
+    if log_level is not None:
+        try:
+            logger.setLevel(log_level)
+        except Exception as exc:
+            raise InvalidLogLevel(exc)
+
+    if not playlist_id:
+        config = SpotifyConfig()
+    else:
+        config = SpotifyConfig(PLAYLIST_ID=playlist_id)
+
+    client = Client(config=config)
+
+    try:
+        playlist_resp = await client.get_playlist(playlist_id)
+    except Exception as exc:
+        raise NoPlaylistFound(exc)
+
+    playlist = PlaylistResponse.model_validate(to_dict(playlist_resp))
+    tracks = [
+        Item.model_validate(to_dict(track))
+        async for track in client.iter_playlist_tracks(playlist_id)
+    ]
+
+    if not tracks:
+        raise NoTracksFound(f"No tracks found for '{playlist.name}'")
+
+    if new_playlist_name is None:
+        new_playlist_name = make_new_playlist_name(playlist.name)
+
+    await shuffle_and_create_new_playlist(
+        client=client,
+        tracks=tracks,
+        old_playlist_name=playlist.name,
+        new_playlist_name=new_playlist_name,
+        public_playlist=public_playlist,
+    )
 
 
 @app.command()
@@ -117,35 +151,13 @@ def main(
         False, help="Whether or not the new playlist is public."
     ),
 ) -> None:
-    if log_level is not None:
-        try:
-            logger.setLevel(log_level)
-        except Exception as exc:
-            raise InvalidLogLevel(exc)
-
-    config = SpotifyConfig(PLAYLIST_ID=playlist_id)
-    client = Client(config=config)
-
-    try:
-        playlist_resp = client.playlist(playlist_id)
-    except Exception as exc:
-        raise NoPlaylistFound(exc)
-
-    playlist = PlaylistResponse.model_validate(playlist_resp)
-    tracks = get_all_playlist_tracks(client, playlist)
-
-    if not tracks:
-        raise NoTracksFound(f"No tracks found for '{playlist.name}'")
-
-    if new_playlist_name is None:
-        new_playlist_name = make_new_playlist_name(playlist.name)
-
-    shuffle_and_create_new_playlist(
-        client=client,
-        tracks=tracks,
-        old_playlist_name=playlist.name,
-        new_playlist_name=new_playlist_name,
-        public_playlist=public_playlist,
+    asyncio.run(
+        run(
+            log_level=log_level,
+            new_playlist_name=new_playlist_name,
+            playlist_id=playlist_id,
+            public_playlist=public_playlist,
+        )
     )
 
 

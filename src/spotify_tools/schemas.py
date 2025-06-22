@@ -1,8 +1,23 @@
-from typing import Optional
-
+from typing import Any, Optional
 
 from pydantic import BaseModel, NonNegativeInt, PositiveInt
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+###############################################################################
+# Helper functions for converting spotipy2 responses into plain dicts
+###############################################################################
+
+
+def to_dict(obj: Any) -> Any:
+    if isinstance(obj, dict):
+        return {k: to_dict(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [to_dict(item) for item in obj]
+    elif hasattr(obj, "__dict__"):
+        return to_dict(obj.__dict__)
+    else:
+        return obj
 
 
 ###############################################################################
