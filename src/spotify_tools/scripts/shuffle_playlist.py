@@ -7,6 +7,7 @@ import random
 from datetime import datetime
 from typing import Optional
 
+from pydantic import ValidationError
 from typer import Option, Typer
 
 from spotify_tools.client import Client
@@ -14,6 +15,7 @@ from spotify_tools.exceptions import (
     InvalidLogLevel,
     NoPlaylistFound,
     NoTracksFound,
+    UnexpectedResponseFormat,
 )
 from spotify_tools.logging import get_logger
 from spotify_tools.schemas import (
@@ -29,17 +31,6 @@ app = Typer()
 logger = get_logger(name="shuffle_playlist")
 
 
-def resolve_playlist_id(value: Optional[str]) -> str:
-    # Use the playlist ID provided via the CLI
-    if value:
-        return value
-
-    # Otherwise load the playlist ID from the environment
-    config = SpotifyConfig()
-    if config.PLAYLIST_ID:
-        return config.PLAYLIST_ID
-
-
 def make_new_playlist_name(old_playlist_name: str) -> str:
     date_string = datetime.now().strftime("%Y-%m-%d %H:%M")
 
@@ -52,6 +43,7 @@ async def shuffle_and_create_new_playlist(
     old_playlist_name: str,
     new_playlist_name: str,
     public_playlist: bool,
+    collaborative: bool,
 ) -> PlaylistResponse:
     random.shuffle(tracks)
     track_uris = [
@@ -62,16 +54,17 @@ async def shuffle_and_create_new_playlist(
     print(res)
     user = User.model_validate(await client.me())
     new_playlist = PlaylistResponse.model_validate(
-        await client.user_playlist_create(
-            user=user.id,
+        await client.create_playlist(
+            user_id=user.id,
             name=new_playlist_name,
             public=public_playlist,
+            collaborative=collaborative,
             description=f"Shuffled version of {old_playlist_name}",
         )
     )
 
     for i in range(0, len(track_uris), 100):
-        await client.playlist_add_items(
+        await client.add_items_to_playlist(
             new_playlist.id, track_uris[i : i + 100]
         )
 
@@ -82,11 +75,12 @@ async def shuffle_and_create_new_playlist(
     return new_playlist
 
 
-async def run(
+async def main(
     log_level: str,
     new_playlist_name: str,
     playlist_id: str,
     public_playlist: bool,
+    collaborative: bool,
 ) -> None:
     if log_level is not None:
         try:
@@ -94,22 +88,28 @@ async def run(
         except Exception as exc:
             raise InvalidLogLevel(exc)
 
-    if not playlist_id:
+    if playlist_id is None:
         config = SpotifyConfig()
     else:
         config = SpotifyConfig(PLAYLIST_ID=playlist_id)
 
-    client = Client(config=config)
+    client = await Client.create(config=config)
 
     try:
-        playlist_resp = await client.get_playlist(playlist_id)
+        playlist = PlaylistResponse.model_validate(
+            to_dict(await client.get_playlist(config.PLAYLIST_ID))
+        )
+    except ValidationError as exc:
+        raise UnexpectedResponseFormat(exc)
+    # # TODO: target proper exception
+    # except SomeException as exc:
+    #     raise NoPlaylistFound(exc)
     except Exception as exc:
         raise NoPlaylistFound(exc)
 
-    playlist = PlaylistResponse.model_validate(to_dict(playlist_resp))
     tracks = [
         Item.model_validate(to_dict(track))
-        async for track in client.iter_playlist_tracks(playlist_id)
+        async for track in client.iter_playlist_tracks(config.PLAYLIST_ID)
     ]
 
     if not tracks:
@@ -118,17 +118,29 @@ async def run(
     if new_playlist_name is None:
         new_playlist_name = make_new_playlist_name(playlist.name)
 
+    if collaborative is not None:
+        is_collaborative = collaborative is True
+    else:
+        is_collaborative = playlist.collaborative is True
+
     await shuffle_and_create_new_playlist(
         client=client,
         tracks=tracks,
         old_playlist_name=playlist.name,
         new_playlist_name=new_playlist_name,
         public_playlist=public_playlist,
+        collaborative=is_collaborative,
     )
 
 
 @app.command()
-def main(
+def run(
+    collaborative: Optional[bool] = Option(
+        None,
+        help=(
+            "Whether or not the shuffled playlist is collaborative (default is the same as 'playlist_id')."
+        ),
+    ),
     log_level: Optional[str] = Option(
         None,
         help="Log level.",
@@ -142,7 +154,6 @@ def main(
     ),
     playlist_id: Optional[str] = Option(
         None,
-        callback=resolve_playlist_id,
         help=(
             "Spotify playlist ID (or set SPOTIFY_TOOLS_PLAYLIST_ID in the environment)."
         ),
@@ -152,11 +163,12 @@ def main(
     ),
 ) -> None:
     asyncio.run(
-        run(
+        main(
             log_level=log_level,
             new_playlist_name=new_playlist_name,
             playlist_id=playlist_id,
             public_playlist=public_playlist,
+            collaborative=collaborative,
         )
     )
 

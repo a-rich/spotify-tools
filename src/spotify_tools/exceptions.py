@@ -11,3 +11,7 @@ class NoPlaylistFound(Exception):
 
 class NoTracksFound(Exception):
     pass
+
+
+class UnexpectedResponseFormat(Exception):
+    pass
