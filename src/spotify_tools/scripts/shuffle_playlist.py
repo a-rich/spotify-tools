@@ -1,6 +1,4 @@
-"""This script is used to create a new playlist from the shuffled tracks of an
-existing playlist.
-"""
+"""Script to create a new playlist from the shuffled tracks of an existing one."""
 
 import random
 from datetime import datetime
@@ -8,20 +6,18 @@ from typing import Optional
 
 from typer import Option, Typer
 
-from spotify_tools.client import Client
+from spotify_tools import (
+    Client,
+    SpotifyConfig,
+    get_playlist,
+    get_all_playlist_tracks,
+    create_playlist,
+    get_logger,
+)
 from spotify_tools.exceptions import (
     InvalidLogLevel,
     NoPlaylistFound,
     NoTracksFound,
-)
-from spotify_tools.logging import get_logger
-from spotify_tools.schemas import (
-    Item,
-    PlaylistResponse,
-    SpotifyConfig,
-    Tracks,
-    TrackSearchResults,
-    User,
 )
 
 
@@ -30,68 +26,21 @@ logger = get_logger(name="shuffle_playlist")
 
 
 def resolve_playlist_id(value: Optional[str]) -> str:
-    # Use the playlist ID provided via the CLI
+    """Resolve playlist ID from CLI arg or environment."""
     if value:
         return value
 
-    # Otherwise load the playlist ID from the environment
     config = SpotifyConfig()
     if config.PLAYLIST_ID:
         return config.PLAYLIST_ID
 
-
-def get_all_playlist_tracks(
-    client: Client, playlist: PlaylistResponse
-) -> list[Item]:
-    all_items: list[Item] = playlist.tracks.items or []
-
-    while playlist.tracks.next:
-        tracks: Tracks = Tracks.model_validate(
-            client.next(playlist.tracks.model_dump())
-        )
-        all_items.extend(tracks.items)
-        playlist.tracks = tracks
-
-    logger.info(f"Got {len(all_items)} tracks from '{playlist.name}'")
-
-    return all_items
+    return ""
 
 
 def make_new_playlist_name(old_playlist_name: str) -> str:
+    """Generate a new playlist name with timestamp."""
     date_string = datetime.now().strftime("%Y-%m-%d %H:%M")
-
     return f"{old_playlist_name} ({date_string})"
-
-
-def shuffle_and_create_new_playlist(
-    client: Client,
-    tracks: list[Item],
-    old_playlist_name: str,
-    new_playlist_name: str,
-    public_playlist: bool,
-) -> PlaylistResponse:
-    random.shuffle(tracks)
-    track_uris = [
-        item.track.uri for item in tracks if item.track and item.track.uri
-    ]
-    user = User.model_validate(client.me())
-    new_playlist = PlaylistResponse.model_validate(
-        client.user_playlist_create(
-            user=user.id,
-            name=new_playlist_name,
-            public=public_playlist,
-            description=f"Shuffled version of {old_playlist_name}",
-        )
-    )
-
-    for i in range(0, len(track_uris), 100):
-        client.playlist_add_items(new_playlist.id, track_uris[i : i + 100])
-
-    logger.info(
-        f"Shuffled '{new_playlist_name}': {new_playlist.external_urls.spotify}"
-    )
-
-    return new_playlist
 
 
 @app.command()
@@ -111,52 +60,63 @@ def main(
         None,
         callback=resolve_playlist_id,
         help=(
-            "Spotify playlist ID (or set SPOTIFY_TOOLS_PLAYLIST_ID in the environment)."
+            "Spotify playlist ID (or set SPOTIFY_TOOLS_PLAYLIST_ID in the "
+            "environment)."
         ),
     ),
     public_playlist: bool = Option(
         False, help="Whether or not the new playlist is public."
     ),
 ) -> None:
+    """Shuffle a playlist and create a new playlist with the shuffled tracks."""
     if log_level is not None:
         try:
             logger.setLevel(log_level)
         except Exception as exc:
-            raise InvalidLogLevel(exc)
+            raise InvalidLogLevel(exc) from exc
 
-    config = SpotifyConfig(PLAYLIST_ID=playlist_id)
-    client = Client(config=config)
-    
-    # results = client.search(
-    #     q="track:The Dreamers artist:Hobzee, Wagz",
-    #     limit=5,
-    #     type="track",
-    # )
-    # tracks = TrackSearchResults.model_validate(results["tracks"])
+    if not playlist_id:
+        raise NoPlaylistFound(
+            "No playlist ID provided. Use --playlist-id or set "
+            "SPOTIFY_TOOLS_PLAYLIST_ID in the environment."
+        )
 
-    # breakpoint()
+    # Initialize client
+    client = Client()
 
-    try:
-        playlist_resp = client.playlist(playlist_id)
-    except Exception as exc:
-        raise NoPlaylistFound(exc)
+    # Get the source playlist
+    playlist = get_playlist(client, playlist_id)
+    if not playlist:
+        raise NoPlaylistFound(f"Could not find playlist with ID: {playlist_id}")
 
-    playlist = PlaylistResponse.model_validate(playlist_resp)
+    # Get all tracks from the playlist
     tracks = get_all_playlist_tracks(client, playlist)
-
     if not tracks:
-        raise NoTracksFound(f"No tracks found for '{playlist.name}'")
+        raise NoTracksFound(f"No tracks found in playlist '{playlist.name}'")
 
+    logger.info(f"Got {len(tracks)} tracks from '{playlist.name}'")
+
+    # Shuffle the tracks
+    random.shuffle(tracks)
+
+    # Generate new playlist name if not provided
     if new_playlist_name is None:
         new_playlist_name = make_new_playlist_name(playlist.name)
 
-    shuffle_and_create_new_playlist(
+    # Create the new playlist
+    new_playlist = create_playlist(
         client=client,
+        name=new_playlist_name,
         tracks=tracks,
-        old_playlist_name=playlist.name,
-        new_playlist_name=new_playlist_name,
-        public_playlist=public_playlist,
+        public=public_playlist,
+        description=f"Shuffled version of {playlist.name}",
     )
+
+    if new_playlist and new_playlist.external_urls:
+        logger.info(
+            f"Created shuffled playlist '{new_playlist_name}': "
+            f"{new_playlist.external_urls.spotify}"
+        )
 
 
 if __name__ == "__main__":

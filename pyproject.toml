@@ -11,6 +11,7 @@ keywords = [
 ]
 requires-python=">=3.9"
 dependencies = [
+    "fuzzywuzzy[speedup]",
     "pydantic",
     "pydantic-settings",
     "spotipy",
