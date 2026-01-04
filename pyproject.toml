@@ -17,12 +17,15 @@ dependencies = [
     "typer",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "coverage",
     "pytest",
     "ruff",
 ]
+
+[tool.uv]
+default-groups = ["dev"]
 
 [tool.ruff]
 line-length = 79
