@@ -20,6 +20,7 @@ from spotify_tools.schemas import (
     PlaylistResponse,
     SpotifyConfig,
     Tracks,
+    TrackSearchResults,
     User,
 )
 
@@ -125,6 +126,15 @@ def main(
 
     config = SpotifyConfig(PLAYLIST_ID=playlist_id)
     client = Client(config=config)
+    
+    # results = client.search(
+    #     q="track:The Dreamers artist:Hobzee, Wagz",
+    #     limit=5,
+    #     type="track",
+    # )
+    # tracks = TrackSearchResults.model_validate(results["tracks"])
+
+    # breakpoint()
 
     try:
         playlist_resp = client.playlist(playlist_id)

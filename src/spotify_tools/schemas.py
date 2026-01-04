@@ -160,3 +160,18 @@ class PlaylistResponse(BaseModel):
     tracks: Optional[Tracks] = None
     type: Optional[str] = None
     uri: Optional[str] = None
+
+
+###############################################################################
+# Schemas for validating spotipy's "search" response
+# https://spotipy.readthedocs.io/en/2.25.1/#spotipy.client.Spotify.search
+###############################################################################
+
+
+class TrackSearchResults(BaseModel):
+    href: Optional[str]
+    items: Optional[list[Track]]
+    limit: Optional[NonNegativeInt]
+    next: Optional[str]
+    offset: Optional[NonNegativeInt]
+    total: Optional[NonNegativeInt]
