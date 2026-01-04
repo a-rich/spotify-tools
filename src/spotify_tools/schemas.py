@@ -169,9 +169,9 @@ class PlaylistResponse(BaseModel):
 
 
 class TrackSearchResults(BaseModel):
-    href: Optional[str]
-    items: Optional[list[Track]]
-    limit: Optional[NonNegativeInt]
-    next: Optional[str]
-    offset: Optional[NonNegativeInt]
-    total: Optional[NonNegativeInt]
+    href: Optional[str] = None
+    items: Optional[list[Track]] = None
+    limit: Optional[NonNegativeInt] = None
+    next: Optional[str] = None
+    offset: Optional[NonNegativeInt] = None
+    total: Optional[NonNegativeInt] = None
