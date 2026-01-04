@@ -1,0 +1,5 @@
+- search to get Track.Items from a list of title & artists
+- get Track.Items from a Playlist
+- create new Playlist from Track.Items
+- update existing Playlist with Track.Items (LIFO queue)
+- given a nested structure of playlist names & Track.Items (e.g. YAML), create folders & playlists
