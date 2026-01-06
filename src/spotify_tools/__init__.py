@@ -24,55 +24,10 @@ Basic usage:
 
 # Client
 from spotify_tools.client import (
-    Client,
     DEFAULT_SCOPES,
+    Client,
     get_client,
     validate_credentials,
-)
-
-# Configuration and schemas
-from spotify_tools.schemas import (
-    SpotifyConfig,
-    # Response types
-    PlaylistResponse,
-    Track,
-    Tracks,
-    Item,
-    Album,
-    Artist,
-    User,
-    # Search results
-    TrackSearchResults,
-)
-
-# Search functionality
-from spotify_tools.search import (
-    SearchType,
-    SearchResult,
-    search_tracks,
-    search_track,
-    search_track_fuzzy,
-    search_track_with_pagination,
-    filter_tracks_by_similarity,
-    batch_search_tracks,
-    calculate_similarity,
-    is_duplicate_track,
-)
-
-# Playlist operations
-from spotify_tools.playlists import (
-    PlaylistTrack,
-    UpdateResult,
-    get_playlist,
-    get_playlist_tracks,
-    get_all_playlist_tracks,
-    get_current_user,
-    create_playlist,
-    add_tracks_to_playlist,
-    remove_tracks_from_playlist,
-    update_playlist,
-    get_or_create_playlist,
-    resolve_track_from_url,
 )
 
 # Exceptions
@@ -85,6 +40,51 @@ from spotify_tools.exceptions import (
 # Logging
 from spotify_tools.logging import get_logger
 
+# Playlist operations
+from spotify_tools.playlists import (
+    PlaylistTrack,
+    UpdateResult,
+    add_tracks_to_playlist,
+    create_playlist,
+    get_all_playlist_tracks,
+    get_current_user,
+    get_or_create_playlist,
+    get_playlist,
+    get_playlist_tracks,
+    remove_tracks_from_playlist,
+    resolve_track_from_url,
+    update_playlist,
+)
+
+# Configuration and schemas
+from spotify_tools.schemas import (
+    Album,
+    Artist,
+    Item,
+    # Response types
+    PlaylistResponse,
+    SpotifyConfig,
+    Track,
+    Tracks,
+    # Search results
+    TrackSearchResults,
+    User,
+)
+
+# Search functionality
+from spotify_tools.search import (
+    SearchResult,
+    SearchType,
+    batch_search_tracks,
+    calculate_similarity,
+    filter_tracks_by_similarity,
+    find_similar_track,
+    is_duplicate_track,
+    search_track,
+    search_track_fuzzy,
+    search_track_with_pagination,
+    search_tracks,
+)
 
 __version__ = "0.0.1"
 
@@ -118,6 +118,7 @@ __all__ = [
     "batch_search_tracks",
     "calculate_similarity",
     "is_duplicate_track",
+    "find_similar_track",
     # Playlists
     "PlaylistTrack",
     "UpdateResult",
@@ -138,4 +139,3 @@ __all__ = [
     # Logging
     "get_logger",
 ]
-

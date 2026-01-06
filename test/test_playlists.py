@@ -4,24 +4,24 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from spotify_tools.schemas import (
-    Track,
-    Artist,
-    Item,
-    Tracks,
-    PlaylistResponse,
-    User,
-    ExternalUrls,
-)
 from spotify_tools.playlists import (
     PlaylistTrack,
+    add_tracks_to_playlist,
+    create_playlist,
+    get_or_create_playlist,
     get_playlist,
     get_playlist_tracks,
-    create_playlist,
-    add_tracks_to_playlist,
-    update_playlist,
-    get_or_create_playlist,
     resolve_track_from_url,
+    update_playlist,
+)
+from spotify_tools.schemas import (
+    Artist,
+    ExternalUrls,
+    Item,
+    PlaylistResponse,
+    Track,
+    Tracks,
+    User,
 )
 
 
@@ -54,7 +54,9 @@ def sample_playlist_response(sample_item):
     return PlaylistResponse(
         id="playlist123",
         name="Test Playlist",
-        external_urls=ExternalUrls(spotify="https://open.spotify.com/playlist/123"),
+        external_urls=ExternalUrls(
+            spotify="https://open.spotify.com/playlist/123"
+        ),
         tracks=Tracks(
             items=[sample_item],
             next=None,
@@ -114,7 +116,9 @@ class TestGetPlaylist:
 
     def test_get_playlist_success(self, mock_client, sample_playlist_response):
         """Test successful playlist retrieval."""
-        mock_client.playlist.return_value = sample_playlist_response.model_dump()
+        mock_client.playlist.return_value = (
+            sample_playlist_response.model_dump()
+        )
 
         result = get_playlist(mock_client, "playlist123")
 
@@ -136,7 +140,9 @@ class TestGetPlaylistTracks:
 
     def test_get_playlist_tracks(self, mock_client, sample_playlist_response):
         """Test getting tracks from a playlist."""
-        mock_client.playlist.return_value = sample_playlist_response.model_dump()
+        mock_client.playlist.return_value = (
+            sample_playlist_response.model_dump()
+        )
 
         tracks = get_playlist_tracks(mock_client, "playlist123")
 
@@ -146,9 +152,9 @@ class TestGetPlaylistTracks:
     def test_get_playlist_tracks_with_pagination(self, mock_client):
         """Test pagination when getting playlist tracks."""
         # First page
-        first_track = Item(track=Track(
-            id="track1", name="Song 1", uri="uri1", artists=[]
-        ))
+        first_track = Item(
+            track=Track(id="track1", name="Song 1", uri="uri1", artists=[])
+        )
         first_page = PlaylistResponse(
             id="playlist123",
             name="Test",
@@ -161,9 +167,16 @@ class TestGetPlaylistTracks:
 
         # Second page
         second_track_data = {
-            "items": [{"track": {
-                "id": "track2", "name": "Song 2", "uri": "uri2", "artists": []
-            }}],
+            "items": [
+                {
+                    "track": {
+                        "id": "track2",
+                        "name": "Song 2",
+                        "uri": "uri2",
+                        "artists": [],
+                    }
+                }
+            ],
             "next": None,
         }
 
@@ -251,9 +264,11 @@ class TestUpdatePlaylist:
     def test_update_playlist_adds_new_tracks(self, mock_client):
         """Test updating playlist with new tracks."""
         # Existing playlist with one track
-        existing = Item(track=Track(
-            id="existing1", name="Existing", uri="uri_existing", artists=[]
-        ))
+        existing = Item(
+            track=Track(
+                id="existing1", name="Existing", uri="uri_existing", artists=[]
+            )
+        )
         playlist_resp = PlaylistResponse(
             id="playlist123",
             name="Test",
@@ -263,7 +278,9 @@ class TestUpdatePlaylist:
 
         # New track to add
         new_tracks = [
-            PlaylistTrack(id="new1", uri="uri_new1", name="New Song", artists="Artist")
+            PlaylistTrack(
+                id="new1", uri="uri_new1", name="New Song", artists="Artist"
+            )
         ]
 
         result = update_playlist(mock_client, "playlist123", new_tracks)
@@ -274,9 +291,9 @@ class TestUpdatePlaylist:
 
     def test_update_playlist_skips_existing(self, mock_client):
         """Test that existing tracks are skipped."""
-        existing = Item(track=Track(
-            id="track1", name="Song 1", uri="uri1", artists=[]
-        ))
+        existing = Item(
+            track=Track(id="track1", name="Song 1", uri="uri1", artists=[])
+        )
         playlist_resp = PlaylistResponse(
             id="playlist123",
             name="Test",
@@ -297,12 +314,12 @@ class TestUpdatePlaylist:
     def test_update_playlist_removes_old_when_max_exceeded(self, mock_client):
         """Test LIFO behavior when max_size is exceeded."""
         # Two existing tracks
-        existing1 = Item(track=Track(
-            id="old1", name="Old 1", uri="uri_old1", artists=[]
-        ))
-        existing2 = Item(track=Track(
-            id="old2", name="Old 2", uri="uri_old2", artists=[]
-        ))
+        existing1 = Item(
+            track=Track(id="old1", name="Old 1", uri="uri_old1", artists=[])
+        )
+        existing2 = Item(
+            track=Track(id="old2", name="Old 2", uri="uri_old2", artists=[])
+        )
         playlist_resp = PlaylistResponse(
             id="playlist123",
             name="Test",
@@ -312,8 +329,12 @@ class TestUpdatePlaylist:
 
         # Add 2 new tracks with max_size=3 (should remove 1 old)
         new_tracks = [
-            PlaylistTrack(id="new1", uri="uri_new1", name="New 1", artists="A"),
-            PlaylistTrack(id="new2", uri="uri_new2", name="New 2", artists="A"),
+            PlaylistTrack(
+                id="new1", uri="uri_new1", name="New 1", artists="A"
+            ),
+            PlaylistTrack(
+                id="new2", uri="uri_new2", name="New 2", artists="A"
+            ),
         ]
 
         result = update_playlist(
@@ -387,4 +408,3 @@ class TestResolveTrackFromUrl:
         result = resolve_track_from_url(mock_client, "invalid_url")
 
         assert result is None
-

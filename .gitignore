@@ -13,6 +13,10 @@ src/spotify_tools/.spotipy.cache
 # pytest cache folder
 .pytest_cache/
 
+# Coverage
+.coverage
+htmlcov/
+
 # egg-info metadata
 src/spotify_tools.egg-info/
 

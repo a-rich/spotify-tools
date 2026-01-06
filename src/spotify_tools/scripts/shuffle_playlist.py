@@ -9,17 +9,16 @@ from typer import Option, Typer
 from spotify_tools import (
     Client,
     SpotifyConfig,
-    get_playlist,
-    get_all_playlist_tracks,
     create_playlist,
+    get_all_playlist_tracks,
     get_logger,
+    get_playlist,
 )
 from spotify_tools.exceptions import (
     InvalidLogLevel,
     NoPlaylistFound,
     NoTracksFound,
 )
-
 
 app = Typer()
 logger = get_logger(name="shuffle_playlist")
@@ -87,7 +86,9 @@ def main(
     # Get the source playlist
     playlist = get_playlist(client, playlist_id)
     if not playlist:
-        raise NoPlaylistFound(f"Could not find playlist with ID: {playlist_id}")
+        raise NoPlaylistFound(
+            f"Could not find playlist with ID: {playlist_id}"
+        )
 
     # Get all tracks from the playlist
     tracks = get_all_playlist_tracks(client, playlist)

@@ -4,15 +4,15 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from spotify_tools.schemas import Track, Artist
+from spotify_tools.schemas import Artist, Track
 from spotify_tools.search import (
     SearchResult,
-    search_tracks,
+    calculate_similarity,
+    filter_tracks_by_similarity,
+    is_duplicate_track,
     search_track,
     search_track_fuzzy,
-    filter_tracks_by_similarity,
-    calculate_similarity,
-    is_duplicate_track,
+    search_tracks,
 )
 
 
@@ -222,7 +222,9 @@ def test_is_duplicate_track():
     assert is_duplicate_track("Test Song - Test Artist", existing)
 
     # Very similar
-    assert is_duplicate_track("Test Song - Test Artists", existing, threshold=90)
+    assert is_duplicate_track(
+        "Test Song - Test Artists", existing, threshold=90
+    )
 
     # Not similar enough
     assert not is_duplicate_track(
@@ -236,4 +238,3 @@ def test_is_duplicate_track_case_insensitive():
 
     assert is_duplicate_track("TEST SONG - TEST ARTIST", existing)
     assert is_duplicate_track("test song - test artist", existing)
-

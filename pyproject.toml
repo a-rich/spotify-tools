@@ -1,6 +1,10 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "spotify-tools"
-version = "0.0.1"
+version = "0.0.2"
 authors = [
     {name = "Alex Richards", email = "alex.richards006@gmail.com"},
 ]
@@ -9,7 +13,7 @@ keywords = [
     "spotify",
     "tools",
 ]
-requires-python=">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "fuzzywuzzy[speedup]",
     "pydantic",
@@ -20,13 +24,60 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "coverage",
     "pytest",
+    "pytest-cov",
     "ruff",
 ]
 
 [tool.uv]
 default-groups = ["dev"]
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/spotify_tools"]
+
+[tool.coverage.run]
+source = ["src"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover"
+]
+
 [tool.ruff]
 line-length = 79
+target-version = "py39"
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort
+    "N",      # pep8-naming
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "G",      # flake8-logging-format
+    "PL",     # Pylint
+    "RUF",    # Ruff-specific rules
+]
+ignore = [
+    "E501",     # line-too-long (formatter handles this)
+    "G004",     # logging-fstring-interpolation (style choice)
+    "PLC0415",  # import-outside-top-level (intentional lazy imports)
+    "N818",     # exception-name (prefer readable names over Error suffix)
+    "RUF022",   # unsorted-all (prefer logical grouping over alphabetical)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"test/*.py" = [
+    "PLR2004",  # magic-value-comparison (expected in tests)
+]
+
+[tool.ruff.lint.pylint]
+max-args = 10
+max-branches = 25
+max-returns = 8
+max-statements = 100
+
+[tool.pytest.ini_options]
+testpaths = ["test"]

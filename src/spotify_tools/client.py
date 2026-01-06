@@ -8,7 +8,6 @@ from spotipy.oauth2 import SpotifyOAuth
 
 from spotify_tools.schemas import SpotifyConfig
 
-
 # Default scopes for spotify-tools
 DEFAULT_SCOPES = [
     "playlist-modify-private",

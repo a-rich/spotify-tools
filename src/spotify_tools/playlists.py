@@ -13,7 +13,6 @@ from spotify_tools.schemas import (
 )
 from spotify_tools.search import is_duplicate_track
 
-
 logger = get_logger(__name__)
 
 
@@ -34,9 +33,7 @@ class PlaylistTrack:
 
         artists = ""
         if item.track.artists:
-            artists = ", ".join(
-                a.name for a in item.track.artists if a.name
-            )
+            artists = ", ".join(a.name for a in item.track.artists if a.name)
 
         return cls(
             id=item.track.id,
@@ -245,7 +242,7 @@ def add_tracks_to_playlist(
     try:
         # Add in batches of 100
         for i in range(0, len(track_uris), 100):
-            batch = track_uris[i:i + 100]
+            batch = track_uris[i : i + 100]
             if position is not None:
                 client.playlist_add_items(
                     playlist_id, batch, position=position + i
@@ -468,10 +465,10 @@ def resolve_track_from_url(client, url: str) -> Optional[PlaylistTrack]:
         if response:
             # Create a mock Track to use from_track
             from spotify_tools.schemas import Track as TrackSchema
+
             track = TrackSchema.model_validate(response)
             return PlaylistTrack.from_track(track)
     except Exception as exc:
         logger.warning(f"Failed to resolve track URL '{url}': {exc}")
 
     return None
-
