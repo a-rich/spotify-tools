@@ -1,9 +1,7 @@
 from typing import Optional
 
-
 from pydantic import BaseModel, NonNegativeInt, PositiveInt
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
 
 ###############################################################################
 # Schemas for spotify-tools configs

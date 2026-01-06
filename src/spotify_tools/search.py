@@ -10,7 +10,6 @@ from fuzzywuzzy import fuzz
 from spotify_tools.logging import get_logger
 from spotify_tools.schemas import Track, TrackSearchResults
 
-
 logger = get_logger(__name__)
 
 
@@ -118,9 +117,7 @@ def search_track_fuzzy(
 
     for track_query, artist_query in queries:
         tracks = search_track(client, track_query, artist_query, limit)
-        matches = filter_tracks_by_similarity(
-            tracks, title, artist, threshold
-        )
+        matches = filter_tracks_by_similarity(tracks, title, artist, threshold)
         all_matches.extend(matches)
 
         # Also paginate through results if there are more
@@ -350,8 +347,28 @@ def is_duplicate_track(
     Returns:
         True if the track is a duplicate.
     """
+    return (
+        find_similar_track(track_name, existing_tracks, threshold) is not None
+    )
+
+
+def find_similar_track(
+    track_name: str,
+    existing_tracks: set[str],
+    threshold: float = 90.0,
+) -> Optional[str]:
+    """Find which existing track is too similar to the candidate.
+
+    Args:
+        track_name: Name of the candidate track (format: "Title - Artist").
+        existing_tracks: Set of existing track names.
+        threshold: Minimum similarity to be considered a duplicate.
+
+    Returns:
+        The similar existing track name, or None if no duplicate found.
+    """
     track_lower = track_name.lower()
     for other in existing_tracks:
         if fuzz.ratio(track_lower, other.lower()) > threshold:
-            return True
-    return False
+            return other
+    return None

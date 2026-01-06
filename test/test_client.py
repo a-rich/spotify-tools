@@ -2,12 +2,12 @@
 
 import os
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 import spotify_tools.client as client_module
-from spotify_tools.client import Client, DEFAULT_SCOPES
+from spotify_tools.client import DEFAULT_SCOPES, Client
 from spotify_tools.schemas import SpotifyConfig
 
 

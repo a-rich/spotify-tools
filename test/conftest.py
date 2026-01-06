@@ -30,4 +30,3 @@ def clean_spotify_env():
             os.environ[var] = value
         else:
             os.environ.pop(var, None)
-
